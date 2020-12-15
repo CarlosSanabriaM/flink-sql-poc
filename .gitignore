@@ -1,0 +1,27 @@
+## Mac files ##
+.DS_Store
+
+## Maven files ##
+**/target
+*.iml
+dependency-reduced-pom.xml
+
+## Java files ##
+*.jar
+*.class
+Prueba*.java
+
+## IDEA files ##
+*.idea
+
+## Development configuration file ##
+/src/main/resources/development-conf.yaml
+
+## Log files ##
+*.log
+
+## JaCoCo (Java Code Coverage) ##
+jacoco.exec
+
+## Excel ##
+~$*.xlsx
