@@ -1,4 +1,5 @@
 CREATE TABLE Movies (
+  id DECIMAL,
   name STRING,
   directorId BIGINT,
   PRIMARY KEY (id) NOT ENFORCED

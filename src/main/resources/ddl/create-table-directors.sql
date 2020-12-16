@@ -1,4 +1,5 @@
 CREATE TABLE Directors (
+  id DECIMAL,
   name STRING,
   PRIMARY KEY (id) NOT ENFORCED
 ) WITH (
