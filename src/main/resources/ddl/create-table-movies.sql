@@ -1,7 +1,8 @@
 CREATE TABLE Movies (
   id DECIMAL,
   name STRING,
-  directorId BIGINT,
+  nominatedToOscar BOOLEAN,
+  directorId DECIMAL,
   PRIMARY KEY (id) NOT ENFORCED
 ) WITH (
   'connector' = 'upsert-kafka',
