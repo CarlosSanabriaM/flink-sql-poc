@@ -1,15 +1,16 @@
 CREATE TABLE Movies (
-  id DECIMAL,
+  id STRING,
   name STRING,
   nominatedToOscar BOOLEAN,
-  directorId DECIMAL,
+  directorId STRING,
   PRIMARY KEY (id) NOT ENFORCED
 ) WITH (
   'connector' = 'upsert-kafka',
   'topic' = 'movies',
   'properties.bootstrap.servers' = 'localhost:9092',
+  --'scan.startup.mode' = 'latest-offset', -- TODO: Doesn't work
   -- This connector requires both a key and value format
   -- where the key fields are derived from the PRIMARY KEY constraint
-  'key.format' = 'json',
+  'key.format' = 'raw',
   'value.format' = 'json'
 )
