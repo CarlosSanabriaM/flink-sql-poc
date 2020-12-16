@@ -10,4 +10,4 @@ CREATE TABLE Movies (
   -- where the key fields are derived from the PRIMARY KEY constraint
   'key.format' = 'json',
   'value.format' = 'json'
-);
+)

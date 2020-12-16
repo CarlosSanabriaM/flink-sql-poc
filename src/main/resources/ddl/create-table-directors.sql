@@ -9,4 +9,4 @@ CREATE TABLE Directors (
   -- where the key fields are derived from the PRIMARY KEY constraint
   'key.format' = 'json',
   'value.format' = 'json'
-);
+)
