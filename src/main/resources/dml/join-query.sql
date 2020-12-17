@@ -4,3 +4,4 @@ SELECT Directors.name AS director,
 FROM Movies
 INNER JOIN Directors
 ON Movies.directorId = Directors.id
+WHERE Movies.nominatedToOscar = TRUE
