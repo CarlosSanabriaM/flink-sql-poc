@@ -1,12 +1,12 @@
 package org.myorg.quickstart.job;
 
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.table.api.*;
+import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.myorg.quickstart.utils.Utils;
-
-import java.time.Duration;
 
 /**
  * Flink SQL Job.
@@ -38,14 +38,14 @@ public class SqlJob {
 		// See docs/interesting-table-config-options.md for information about some interesting TableConfig options
 
 		// access flink configuration
-		TableConfig tableConfig = tableEnv.getConfig();
-		Configuration configuration = tableConfig.getConfiguration();
+		//TableConfig tableConfig = tableEnv.getConfig();
+		//Configuration configuration = tableConfig.getConfiguration();
 		// Set common or important configuration options (TableConfig provides getters and setters)
-		tableConfig.setIdleStateRetention(Duration.ZERO);
+		//tableConfig.setIdleStateRetention(Duration.ZERO);
 		// Set low-level key-value options
-		configuration.setString("table.exec.mini-batch.enabled", "true");
-		configuration.setString("table.exec.mini-batch.allow-latency", "5 s");
-		configuration.setString("table.exec.mini-batch.size", "5000");
+		//configuration.setString("table.exec.mini-batch.enabled", "true");
+		//configuration.setString("table.exec.mini-batch.allow-latency", "5 s");
+		//configuration.setString("table.exec.mini-batch.size", "5000");
 		//endregion
 
 		//region Define Catalog and Database (not needed)
@@ -85,6 +85,32 @@ public class SqlJob {
 
 		// Print the results
 		queryTableResult.print();
+
+		// https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/streaming/dynamic_tables.html#table-to-stream-conversion
+		// This implementation gives as a result a retract stream:
+		// A dynamic table is converted into a retract stream by encoding:
+		// * An INSERT change as add message (+I)
+		// * A DELETE change as a retract message (???) TODO: ??
+		// * An UPDATE change as a retract message for the updated (previous) row (-U), and an additional message for the updating (new) row (+U)
+		//
+		// A dynamic table that is converted into a retract stream DOES NOT need a unique primary key,
+		// because each update generates a retract message of the previous value for that event.
+		//endregion
+
+		//region Convert query Table result into an Upsert stream
+		// TODO
+		// A dynamic table that is converted into an upsert stream requires a (possibly composite) unique key,
+		// because UPDATES do not retract previous events and then create a new event with the new value.
+		// UPDATES simply override the previous value of that unique key.
+		//
+		// A dynamic table with a unique key is transformed into a stream by encoding:
+		// * INSERT and UPDATE changes as upsert messages (U) TODO: ??
+		// * DELETE changes as delete messages (-D) TODO: ??
+		//
+		// The stream consuming operator needs to be aware of the unique key attribute to apply messages correctly.
+		// The main difference to a retract stream is that UPDATE changes are encoded with a single message and hence more efficient
+		//
+		// Only append and retract streams are supported when converting a dynamic table into a DataStream.
 		//endregion
 
 		// Execute Flink program
