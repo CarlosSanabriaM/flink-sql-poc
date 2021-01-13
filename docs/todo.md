@@ -3,3 +3,6 @@
     * AppendStreamTableSink
     * RetractStreamTableSink
     * UpsertStreamTableSink
+ * Use kafka-cat to send events to kafka: https://github.com/edenhill/kafkacat.  
+   Produce a tombstone (a "delete" for compacted topics) for key "abc" by providing an empty message value which -Z interpretes as NULL:  
+   `$ echo "abc:" | kafkacat -b mybroker -t mytopic -Z -K:`
