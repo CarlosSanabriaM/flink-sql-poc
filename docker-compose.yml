@@ -1,0 +1,51 @@
+version: "2.2"
+
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: wurstmeister/kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      # IMPORTANT: The following environment variable:
+      # * Must have "kafka" as value if you aim to connect to this Redis cluster from another docker container (using kafka:9092).
+      # * Must have "localhost" as value if you aim to connect to this Redis cluster from your host machine (using localhost:9092).
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      #KAFKA_ADVERTISED_HOST_NAME: localhost
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Create 3 topics:
+      # * movies:    3 partitions, 2 replicas
+      # * directors: 3 partitions, 2 replicas
+      # * output:    3 partitions, 2 replicas
+      KAFKA_CREATE_TOPICS: "movies:3:2,directors:3:2,output:3:2"
+      # Create topics automatically
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  kafkacat:
+    image: edenhill/kafkacat:1.6.0
+    depends_on:
+      - kafka
+    volumes:
+      - /vagrant:/vagrant
+
+  # This will download the image and execute the container at the start of the VM
+  # and after executing `docker-compose up -d` from inside the VM.
+  # But the container will automatically shutdown, because it expects to receive args for the kafkacat command.
+  # You will have to create this docker container manually each time you need to execute a kafkacat command.
+  # Example:
+  #  `docker run --network=vagrant_default -v /vagrant:/vagrant -it --rm edenhill/kafkacat:1.6.0 <kafkacat-args>`
+  # The /vagrant volume of the VM is mounted to the /vagrant folder, to allow kafkacat have access to project files
+  linux:
+    image: edenhill/kafkacat:1.6.0
+    depends_on:
+      - kafka
+    volumes:
+      - /vagrant:/vagrant
