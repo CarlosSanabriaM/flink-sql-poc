@@ -1,6 +1,6 @@
-{
-  "id": "movieId3",
-  "name": "Avatar",
-  "nominatedToOscar": false,
-  "directorId": "directorId2"
+movieId3|{
+"id": "movieId3",
+"name": "Avatar",
+"nominatedToOscar": false,
+"directorId": "directorId2"
 }

@@ -1,6 +1,6 @@
-{
-  "id": "movieId1",
-  "name": "Star Wars: The Empire Strikes Back",
-  "nominatedToOscar": true,
-  "directorId": "directorId1"
+movieId1|{
+"id": "movieId1",
+"name": "Star Wars: The Empire Strikes Back",
+"nominatedToOscar": true,
+"directorId": "directorId1"
 }

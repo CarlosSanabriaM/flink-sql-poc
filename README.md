@@ -2,69 +2,113 @@
 
 This project represents a Proof of Concept of Flink SQL capabilities.
 
+It uses Vagrant to automate the creation of an Ubuntu VM that installs Docker,
+pulls Zookeeper, Kafka and Kafkacat Docker images from DockerHub,
+and runs containers for all of them with the corresponding port mappings for Kafka.
+
+
+## Kafka
+Kafka will be accessible:
+* To the Docker containers inside the VM through `kafka:29092`
+* To the VM and the host machine through `localhost:9092`
+    * This is due to port mappings in the Kafka container and in the Vagrant VM
+
+The following diagram shows the architecture:
+
+![Architecture diagram](docs/diagrams/kafka/kafka-architecture-diagram.png)
+
+### Kafka listeners
+Rules:
+* No listeners may share a port number.
+* An advertised.listener must be present by protocol name and port number in the list of listeners.
+* The script that configures the Docker image uses the listener name to determine whether to include the SSL configuration items. 
+  If you want to use SSL, you need to include SSL in your listener name (e.g. OUTSIDE_SSL).
+* Kafka brokers communicate between themselves, usually on the internal network (e.g. Docker network, AWS VPC, etc).
+  To define which listener to use, specify KAFKA_INTER_BROKER_LISTENER_NAME (inter.broker.listener.name).
+  The host/IP used must be accessible from the broker machine to others.
+
+Kafka clients may well not be local to the broker’s network, and this is where the additional listeners come in.
+
+When you run a client, the broker you pass to it is just where it’s going to go and get the metadata about brokers in the cluster from.
+The actual host & IP that it will connect to for reading/writing data is based on the data that the broker passes back in that initial connection.
+
+When connecting to a broker, the listener that will be returned to the client will be the listener to which you connected (based on the port).
+
+With all this information, the following environment variables in the Kafka Docker image should be used to configure the listeners:
+```yaml
+kafka:
+  environment:
+    KAFKA_LISTENERS: INSIDE://kafka:29092,OUTSIDE://:9092
+    KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:29092,OUTSIDE://localhost:9092
+    KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+    KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+```
+
+The listener endpoint returned by Kafka can be tested with the following commands, executed inside the VM:
+```bash
+docker run --network=vagrant_default -it --rm edenhill/kafkacat:1.6.0 -b kafka:29092 -L
+
+sudo apt-get install -y kafkacat
+kafkacat -b localhost:9092 -L
+```
+
+> kafkacat is a useful tool for exploring this. Using -L you can see the metadata for the listener to which you connected. 
+
+[More info about how Kafka listeners work](https://rmoff.net/2018/08/02/kafka-listeners-explained/)
+
+### Kafka topics
+The `docker-compose.yml` file automatically creates the following topics in the Kafka executed in the Docker container:
+* __movies__:    1 partitions, 1 replicas
+* __directors__: 1 partitions, 1 replicas
+* __output__:    1 partitions, 1 replicas
+
+This is specified in the `docker-compose.yml` file, in the following line:
+```yaml
+KAFKA_CREATE_TOPICS: "movies:1:1,directors:1:1,output:1:1"
+```
+
+
 ## Entity relationship model
 The following image shows the entity relationship model used in this demo:
 
 ![Entity relationship model](docs/diagrams/diagrams-0-entity-relationship-model.png)
 
-## Tests
+
+## Prerequisites
+* [Install VirtualBox](https://www.virtualbox.org/wiki/Downloads)
+* [Install Vagrant](https://www.vagrantup.com/docs/installation)
+* Install the `vagrant-docker-compose` Vagrant plugin:
+  ```bash
+  vagrant plugin install vagrant-docker-compose
+  ```
+
+
+## Steps to execute the POC
 This section explains how to execute all the test cases implemented to test the Flink SQL capabilities.
 
-The following commands work for Windows and Linux, but __in Windows they must be executed in Git Bash__ (or similar), using "unix paths ('/' instead of '\' and '/c/' instead of 'C:\')".
+### 1. Start the VM [host]
+This will install Docker inside that VM, pull the docker images from DockerHub,
+and run containers for Zookeeper and Kafka (Kafkacat will start and stop, it does not matter).
 
-`tr -d '\r\n'` works for both, CRLF ('\r\n', Windows) and LF ('\n', Linux and MacOS).
-
-The commands must be executed from the project root folder.
-
-### Initial configuration
-Before anything else, you must start:
-1. Zookeper
-2. Kafka
-
-Set Kafka absolute path:
 ```bash
-export KAFKA_ABSOLUTE_PATH="<kafka-absolute-path>"
-
-# Example for Windows:
-export KAFKA_ABSOLUTE_PATH="/c/Kafka/kafka_2.13-2.6.0"
+vagrant up
 ```
 
-For Windows:
+### 2. Connect to the VM [host]
+This connection is done via ssh.
+
 ```bash
-export KAFKA_CONSOLE_PRODUCER="$KAFKA_ABSOLUTE_PATH/bin/windows/kafka-console-producer.bat"
-export KAFKA_CONSOLE_CONSUMER="$KAFKA_ABSOLUTE_PATH/bin/windows/kafka-console-consumer.bat"
-export KAFKA_TOPICS="$KAFKA_ABSOLUTE_PATH/bin/windows/kafka-topics.bat"
+vagrant ssh
 ```
 
-For Linux:
+### 3. Set environment variables [vm]
 ```bash
-export KAFKA_CONSOLE_PRODUCER="$KAFKA_ABSOLUTE_PATH/bin/kafka-console-producer.sh"
-export KAFKA_CONSOLE_CONSUMER="$KAFKA_ABSOLUTE_PATH/bin/kafka-console-consumer.sh"
-export KAFKA_TOPICS="$KAFKA_ABSOLUTE_PATH/bin/kafka-topics.sh"
+export KAFKA_PRODUCER_MOVIES_PREFIX="docker run --network=vagrant_default -v /vagrant:/vagrant -it --rm edenhill/kafkacat:1.6.0 -b kafka:29092 -P -t movies -D '~' -K '|' -Z -l /vagrant/docs/events/movies/"
+export KAFKA_PRODUCER_DIRECTORS_PREFIX="docker run --network=vagrant_default -v /vagrant:/vagrant -it --rm edenhill/kafkacat:1.6.0 -b kafka:29092 -P -t directors -D '~' -K '|' -Z -l /vagrant/docs/events/directors/"
+
 ```
 
-### Create Kafka topics
-```bash
-"$KAFKA_TOPICS" --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic movies
-"$KAFKA_TOPICS" --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic directors
-```
-
-### Optionally, launch consumers over the movies and directors topics
-These consumers are useful to check that the events are sent correctly to both topics.
-
-They should be created in different terminal windows.
-
-Movies consumer (terminal window 2):
-```bash
-"$KAFKA_CONSOLE_CONSUMER" --topic movies --bootstrap-server localhost:9092 --property print.key=true
-``` 
-
-Directors consumer (terminal window 3):
-```bash
-"$KAFKA_CONSOLE_CONSUMER" --topic directors --bootstrap-server localhost:9092 --property print.key=true
-``` 
-
-### Run the Flink Job in IntelliJ
+### 4. Run the Flink Job in IntelliJ [host]
 Step 1:  
 ![Step 1](docs/images/intellij-1.png)
 
@@ -74,7 +118,9 @@ Step 2:
 Step 3:  
 ![Step 3](docs/images/intellij-3.png)
 
-### Test 1 (update normal fields)
+Changes in the table stream will be printed in the IntelliJ `Run console`.
+
+### 5. Test 1 (update normal fields) [vm]
 Here we test inserts and updates in normal fields (fields that are not used as FKs and are not used in the filters of the WHERE clause).
 
 | Event num | Input event                    | Output events                                                                               | Diagram                                                                              |
@@ -89,17 +135,17 @@ Here we test inserts and updates in normal fields (fields that are not used as F
 | 8         | director1-event3 (update name) | d1e3-m1e1 (Quentin Tarantino, Inception, true) ; d1e3-m2e1 (Quentin Tarantino, Tenet, true) | ![Input event 8 diagram](docs/diagrams/diagrams-8-query-state-and-output-events.png) |
 | 9         | movie1-event2 (update name)    | d1e3-m1e2 (Quentin Tarantino, Star Wars: The Empire Strikes Back, true)                     | ![Input event 9 diagram](docs/diagrams/diagrams-9-query-state-and-output-events.png) |
 
-Commands to insert the previous events in the specified order:
+Commands that must be executed inside the VM created with Vagrant to insert the previous events in the specified order:
 ```bash
-cat docs/events/movies/movie1/movie1-event1.json | tr -d '\r\n' | xargs -0 echo -n 'movieId1#' | "$KAFKA_CONSOLE_PRODUCER" --topic movies --broker-list localhost:9092 --property "parse.key=true" --property "key.separator=#"; echo "Inserted event 1"
-cat docs/events/directors/director1/director1-event1.json | tr -d '\r\n' | xargs -0 echo -n 'directorId1#' | "$KAFKA_CONSOLE_PRODUCER" --topic directors --broker-list localhost:9092 --property "parse.key=true" --property "key.separator=#"; echo "Inserted event 2"
-cat docs/events/movies/movie2/movie2-event1.json | tr -d '\r\n' | xargs -0 echo -n 'movieId2#' | "$KAFKA_CONSOLE_PRODUCER" --topic movies --broker-list localhost:9092 --property "parse.key=true" --property "key.separator=#"; echo "Inserted event 3"
-cat docs/events/directors/director2/director2-event1.json | tr -d '\r\n' | xargs -0 echo -n 'directorId2#' | "$KAFKA_CONSOLE_PRODUCER" --topic directors --broker-list localhost:9092 --property "parse.key=true" --property "key.separator=#"; echo "Inserted event 4"
-cat docs/events/movies/movie3/movie3-event1.json | tr -d '\r\n' | xargs -0 echo -n 'movieId3#' | "$KAFKA_CONSOLE_PRODUCER" --topic movies --broker-list localhost:9092 --property "parse.key=true" --property "key.separator=#"; echo "Inserted event 5"
-cat docs/events/directors/director1/director1-event2-update-name.json | tr -d '\r\n' | xargs -0 echo -n 'directorId1#' | "$KAFKA_CONSOLE_PRODUCER" --topic directors --broker-list localhost:9092 --property "parse.key=true" --property "key.separator=#"; echo "Inserted event 6"
-cat docs/events/directors/director2/director2-event2-update-name.json | tr -d '\r\n' | xargs -0 echo -n 'directorId2#' | "$KAFKA_CONSOLE_PRODUCER" --topic directors --broker-list localhost:9092 --property "parse.key=true" --property "key.separator=#"; echo "Inserted event 7"
-cat docs/events/directors/director1/director1-event3-update-name.json | tr -d '\r\n' | xargs -0 echo -n 'directorId1#' | "$KAFKA_CONSOLE_PRODUCER" --topic directors --broker-list localhost:9092 --property "parse.key=true" --property "key.separator=#"; echo "Inserted event 8"
-cat docs/events/movies/movie1/movie1-event2-update-name.json | tr -d '\r\n' | xargs -0 echo -n 'movieId1#' | "$KAFKA_CONSOLE_PRODUCER" --topic movies --broker-list localhost:9092 --property "parse.key=true" --property "key.separator=#"; echo "Inserted event 9"
+eval "$KAFKA_PRODUCER_MOVIES_PREFIX"movie1/movie1-event1.json; echo "Inserted event 1"
+eval "$KAFKA_PRODUCER_DIRECTORS_PREFIX"director1/director1-event1.json; echo "Inserted event 2"
+eval "$KAFKA_PRODUCER_MOVIES_PREFIX"movie2/movie2-event1.json; echo "Inserted event 3"
+eval "$KAFKA_PRODUCER_DIRECTORS_PREFIX"director2/director2-event1.json; echo "Inserted event 4"
+eval "$KAFKA_PRODUCER_MOVIES_PREFIX"movie3/movie3-event1.json; echo "Inserted event 5"
+eval "$KAFKA_PRODUCER_DIRECTORS_PREFIX"director1/director1-event2-update-name.json; echo "Inserted event 6"
+eval "$KAFKA_PRODUCER_DIRECTORS_PREFIX"director2/director2-event2-update-name.json; echo "Inserted event 7"
+eval "$KAFKA_PRODUCER_DIRECTORS_PREFIX"director1/director1-event3-update-name.json; echo "Inserted event 8"
+eval "$KAFKA_PRODUCER_MOVIES_PREFIX"movie1/movie1-event2-update-name.json; echo "Inserted event 9"
 
 ```
 
@@ -114,8 +160,8 @@ As a consequence of that, Flink should generate an event that retracts that even
 
 Commands to insert the previous events in the specified order:
 ```bash
-cat docs/events/movies/movie3/movie3-event2-update-nominated-to-oscar-to-false.json | tr -d '\r\n' | xargs -0 echo -n 'movieId3#' | "$KAFKA_CONSOLE_PRODUCER" --topic movies --broker-list localhost:9092 --property "parse.key=true" --property "key.separator=#"; echo "Inserted event 10"
-cat docs/events/directors/director2/director2-event3-update-name.json | tr -d '\r\n' | xargs -0 echo -n 'directorId2#' | "$KAFKA_CONSOLE_PRODUCER" --topic directors --broker-list localhost:9092 --property "parse.key=true" --property "key.separator=#"; echo "Inserted event 11"
+eval "$KAFKA_PRODUCER_MOVIES_PREFIX"movie3/movie3-event2-update-nominated-to-oscar-to-false.json; echo "Inserted event 10"
+eval "$KAFKA_PRODUCER_DIRECTORS_PREFIX"director2/director2-event3-update-name.json; echo "Inserted event 11"
 
 ```
 
@@ -131,8 +177,42 @@ Flink should remove from the join states the relationship between that event and
 
 Commands to insert the previous events in the specified order:
 ```bash
-cat docs/events/movies/movie2/movie2-event2-fk-change.json | tr -d '\r\n' | xargs -0 echo -n 'movieId2#' | "$KAFKA_CONSOLE_PRODUCER" --topic movies --broker-list localhost:9092 --property "parse.key=true" --property "key.separator=#"; echo "Inserted event 12"
-cat docs/events/directors/director2/director2-event4-update-name.json | tr -d '\r\n' | xargs -0 echo -n 'directorId2#' | "$KAFKA_CONSOLE_PRODUCER" --topic directors --broker-list localhost:9092 --property "parse.key=true" --property "key.separator=#"; echo "Inserted event 13"
-cat docs/events/directors/director1/director1-event4-update-name.json | tr -d '\r\n' | xargs -0 echo -n 'directorId1#' | "$KAFKA_CONSOLE_PRODUCER" --topic directors --broker-list localhost:9092 --property "parse.key=true" --property "key.separator=#"; echo "Inserted event 14"
+eval "$KAFKA_PRODUCER_MOVIES_PREFIX"movie2/movie2-event2-fk-change.json; echo "Inserted event 12"
+eval "$KAFKA_PRODUCER_DIRECTORS_PREFIX"director2/director2-event4-update-name.json; echo "Inserted event 13"
+eval "$KAFKA_PRODUCER_DIRECTORS_PREFIX"director1/director1-event4-update-name.json; echo "Inserted event 14"
 
+```
+
+### Test 4 (delete events)
+Here we test delete events.  
+An input Kafka event with a null value represents a “DELETE”.
+
+| Event num | Input event               | Output events                                                            | Diagram                                                                                |
+|-----------|---------------------------|--------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| 15        | movie1-event3 (delete)    | retract d1e4-m1e2 (Tim Burton, Star Wars: The Empire Strikes Back, true) | ![Input event 15 diagram](docs/diagrams/diagrams-15-query-state-and-output-events.png) |
+| 16        | director2-event5 (delete) | retract d2e4-m2e2 (Guillermo del Toro, Tenet, true)                      | ![Input event 16 diagram](docs/diagrams/diagrams-16-query-state-and-output-events.png) |
+
+Commands to insert the previous events in the specified order:
+
+```bash
+eval "$KAFKA_PRODUCER_MOVIES_PREFIX"movie1/movie1-event3-delete.json; echo "Inserted event 15"
+eval "$KAFKA_PRODUCER_DIRECTORS_PREFIX"director2/director2-event5-delete.json; echo "Inserted event 16"
+
+```
+
+
+## Other Kafkacat commands
+### Producer reading events from stdin
+```bash
+docker run --network=vagrant_default -it --rm edenhill/kafkacat:1.6.0 -b kafka:9092 -P -t movies -K "|" -Z
+```
+
+### Producer reading events from file (located in the host)
+```bash
+docker run --network=vagrant_default -v /vagrant:/vagrant -it --rm edenhill/kafkacat:1.6.0 -b kafka:9092 -P -t movies -D "~" -K "|" -Z -l /vagrant/docs/events/movies/movie1/movie1-event1.json
+```
+
+### Consumer
+```bash
+docker run --network=vagrant_default -it --rm edenhill/kafkacat:1.6.0 -b kafka:9092 -C -t movies -f 'key: %k\nvalue: %s\n(offset: %o, key-bytes: %K, value-bytes: %S)\n\n\n'
 ```

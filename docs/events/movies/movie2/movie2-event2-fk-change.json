@@ -1,6 +1,6 @@
-{
-  "id": "movieId2",
-  "name": "Tenet",
-  "nominatedToOscar": true,
-  "directorId": "directorId2"
+movieId2|{
+"id": "movieId2",
+"name": "Tenet",
+"nominatedToOscar": true,
+"directorId": "directorId2"
 }
