@@ -187,16 +187,18 @@ eval "$KAFKA_PRODUCER_DIRECTORS_PREFIX"director1/director1-event4-update-name.js
 Here we test delete events.  
 An input Kafka event with a null value represents a “DELETE”.
 
-| Event num | Input event               | Output events                                                            | Diagram                                                                                |
-|-----------|---------------------------|--------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
-| 15        | movie1-event3 (delete)    | retract d1e4-m1e2 (Tim Burton, Star Wars: The Empire Strikes Back, true) | ![Input event 15 diagram](docs/diagrams/diagrams-15-query-state-and-output-events.png) |
-| 16        | director2-event5 (delete) | retract d2e4-m2e2 (Guillermo del Toro, Tenet, true)                      | ![Input event 16 diagram](docs/diagrams/diagrams-16-query-state-and-output-events.png) |
+| Event num | Input event                 | Output events                                                            | Diagram                                                                                |
+|-----------|-----------------------------|--------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| 15        | movie1-event3 (delete)      | retract d1e4-m1e2 (Tim Burton, Star Wars: The Empire Strikes Back, true) | ![Input event 15 diagram](docs/diagrams/diagrams-15-query-state-and-output-events.png) |
+| 16        | director2-event5 (delete)   | retract d2e4-m2e2 (Guillermo del Toro, Tenet, true)                      | ![Input event 16 diagram](docs/diagrams/diagrams-16-query-state-and-output-events.png) |
+| 17        | movie2-event3 (update name) |                                                                          | ![Input event 17 diagram](docs/diagrams/diagrams-17-query-state-and-output-events.png) |
 
 Commands to insert the previous events in the specified order:
 
 ```bash
 eval "$KAFKA_PRODUCER_MOVIES_PREFIX"movie1/movie1-event3-delete.json; echo "Inserted event 15"
 eval "$KAFKA_PRODUCER_DIRECTORS_PREFIX"director2/director2-event5-delete.json; echo "Inserted event 16"
+eval "$KAFKA_PRODUCER_MOVIES_PREFIX"movie2/movie2-event3-update-name.json; echo "Inserted event 17"
 
 ```
 
