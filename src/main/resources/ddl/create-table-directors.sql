@@ -6,7 +6,7 @@ CREATE TABLE Directors (
   'connector' = 'upsert-kafka',
   'topic' = 'directors',
   'properties.bootstrap.servers' = 'localhost:9092',
-  --'scan.startup.mode' = 'latest-offset', -- TODO: Doesn't work
+  'properties.group.id' = 'flink-sql-poc',
   -- This connector requires both a key and value format
   -- where the key fields are derived from the PRIMARY KEY constraint
   'key.format' = 'raw',
