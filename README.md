@@ -57,15 +57,73 @@ kafkacat -b localhost:9092 -L
 [More info about how Kafka listeners work](https://rmoff.net/2018/08/02/kafka-listeners-explained/)
 
 ### Kafka topics
+The Flink `kafka-upsert` connector used in this PoC:
+* [Requires input topics to be compacted](https://cwiki.apache.org/confluence/display/FLINK/FLIP-149%3A+Introduce+the+upsert-kafka+Connector#FLIP149:IntroducetheupsertkafkaConnector-Upsert-kafkaSource)
+* Requires input topics to set as Kafka event key the PK of that row in the origin database
+* Requires input topics to set delete events as events with null value (`tombstone`)
+* [Always reads input topics from the earliest offset](https://cwiki.apache.org/confluence/display/FLINK/FLIP-149%3A+Introduce+the+upsert-kafka+Connector#FLIP149:IntroducetheupsertkafkaConnector-Upsert-kafkaSource)
+* [Produces a changelog stream, where each data record represents an update or delete event](https://cwiki.apache.org/confluence/display/FLINK/FLIP-149%3A+Introduce+the+upsert-kafka+Connector#FLIP149:IntroducetheupsertkafkaConnector-Upsert-kafkaConnectorDefinition)
+    * A data record in a changelog stream is interpreted as an UPSERT aka INSERT/UPDATE because any existing row with the same key is overwritten
+    * Null values are interpreted in a special way: a record with a null value represents a “DELETE”
+
 The `docker-compose.yml` file automatically creates the following topics in the Kafka executed in the Docker container:
-* __movies__:    1 partitions, 1 replicas
-* __directors__: 1 partitions, 1 replicas
-* __output__:    1 partitions, 1 replicas
+* __movies__:    1 partitions, 1 replicas, compacted
+* __directors__: 1 partitions, 1 replicas, compacted
+* __output__:    1 partitions, 1 replicas, compacted
 
 This is specified in the `docker-compose.yml` file, in the following line:
 ```yaml
-KAFKA_CREATE_TOPICS: "movies:1:1,directors:1:1,output:1:1"
+KAFKA_CREATE_TOPICS: "movies:1:1:compact,directors:1:1:compact,output:1:1:compact"
 ```
+
+#### Compaction
+To tune the Kafka compaction mechanism, the following properties have to be set at __broker level__:
+* [log.segment.bytes](https://kafka.apache.org/documentation.html#brokerconfigs_log.segment.bytes)
+    * The maximum size of a single log file
+* [log.cleaner.min.cleanable.ratio](https://kafka.apache.org/documentation.html#brokerconfigs_log.cleaner.min.cleanable.ratio)
+    * The minimum ratio of dirty log to total log for a log to be eligible for cleaning
+    * This ratio bounds the maximum space wasted in the log by duplicates
+    * A higher ratio will mean fewer, more efficient cleanings but will mean more wasted space in the log
+* [log.cleaner.delete.retention.ms](https://kafka.apache.org/documentation.html#brokerconfigs_log.cleaner.delete.retention.ms)
+    * How long are delete records (`tombstone`) retained?
+    * This is a crucial config, because if tombstones represent delete events, we may need to keep them in the log,
+      so applications can handle them at any time by reprocessing the entire log,
+      e.g., if Flink needs to delete those events from the Flink state.
+    * However, it doesn't make sense to keep those delete events forever, because new applications consuming the log
+      do not need to read those delete events.
+    * For all those reasons, the best solution is to specify a value for this property that is high enough to
+      allow Flink applications to be executed from a savepoint that was created a couple of days ago, 
+      and that those applications can read those delete events because they have not expired yet.
+        * TL;DR: For production, `1 week` should be more than enough
+* [log.cleaner.threads](https://kafka.apache.org/documentation.html#brokerconfigs_log.cleaner.threads)
+    * The number of background threads to use for log cleaning
+    * By default, is 1. In production, it may need to be tuned.
+* Other properties whose name starts with `log.cleaner.`
+
+Some of these properties are specified in the `docker-compose.yml` file, as environment variables, in the following lines:
+```yaml
+kafka:
+  environment:
+    # Segment size of 1MB (event size is around 200B)
+    # This allows compaction to take effect in non-active segments in this PoC
+    KAFKA_LOG_SEGMENT_BYTES: 1024
+    # The minimum ratio of dirty log to total log for a log to be eligible for cleaning
+    # A higher ratio will mean fewer, more efficient cleanings but will mean more wasted space in the log
+    # A log is elegible for cleaning if there is, at least, a 10% of duplicates
+    KAFKA_LOG_CLEANER_MIN_CLEANABLE_RATIO: 0.1
+    # How long are delete records (tombstone) retained
+    # 5 minutes allow deletion of tombstones to be seen in this PoC
+    KAFKA_LOG_CLEANER_DELETE_RETENTION_MS: 300000
+```
+
+When using compaction, you will want to monitor the following Kafka metrics:
+* `uncleanable-partitions-count`
+* `max-clean-time-secs`
+* `max-compaction-delay-secs metrics`
+
+This is explained in more detail in thw following links:
+* [Kafka compaction documentation](https://kafka.apache.org/documentation/#compaction)
+* [Blog: Log compacted topics in Apache Kafka](https://towardsdatascience.com/log-compacted-topics-in-apache-kafka-b1aa1e4665a7)
 
 
 ## Entity relationship model
@@ -206,15 +264,24 @@ eval "$KAFKA_PRODUCER_MOVIES_PREFIX"movie2/movie2-event3-update-name.json; echo 
 ## Other Kafkacat commands
 ### Producer reading events from stdin
 ```bash
-docker run --network=vagrant_default -it --rm edenhill/kafkacat:1.6.0 -b kafka:9092 -P -t movies -K "|" -Z
+docker run --network=vagrant_default -it --rm edenhill/kafkacat:1.6.0 -b kafka:29092 -P -t movies -K "|" -Z
 ```
 
 ### Producer reading events from file (located in the host)
 ```bash
-docker run --network=vagrant_default -v /vagrant:/vagrant -it --rm edenhill/kafkacat:1.6.0 -b kafka:9092 -P -t movies -D "~" -K "|" -Z -l /vagrant/docs/events/movies/movie1/movie1-event1.json
+docker run --network=vagrant_default -v /vagrant:/vagrant -it --rm edenhill/kafkacat:1.6.0 -b kafka:29092 -P -t movies -D "~" -K "|" -Z -l /vagrant/docs/events/movies/movie1/movie1-event1.json
 ```
 
 ### Consumer
 ```bash
-docker run --network=vagrant_default -it --rm edenhill/kafkacat:1.6.0 -b kafka:9092 -C -t movies -f 'key: %k\nvalue: %s\n(offset: %o, key-bytes: %K, value-bytes: %S)\n\n\n'
+docker run --network=vagrant_default -it --rm edenhill/kafkacat:1.6.0 -b kafka:29092 -C -t movies -f 'key: %k\nvalue: %s\n(offset: %o, key-bytes: %K, value-bytes: %S)\n\n\n'
 ```
+
+
+## References
+* [Connector Flink SQL Upsert-kafka](https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/connectors/upsert-kafka.html)
+* [Connector Flink SQL Kafka (we do not use it, only works with CDC in some specific formats)](https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/connectors/kafka.html)
+* [FLIP-149: Introduce the upsert-kafka Connector](https://cwiki.apache.org/confluence/display/FLINK/FLIP-149%3A+Introduce+the+upsert-kafka+Connector)
+* [Alibaba: Introduction to SQL in Flink 1.11](https://www.alibabacloud.com/blog/introduction-to-sql-in-flink-1-11_597341)
+* [Kafka compaction documentation](https://kafka.apache.org/documentation/#compaction)
+* [Blog: Log compacted topics in Apache Kafka](https://towardsdatascience.com/log-compacted-topics-in-apache-kafka-b1aa1e4665a7)

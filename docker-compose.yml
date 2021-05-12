@@ -24,12 +24,24 @@ services:
       # endregion
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       # Create 3 topics:
-      # * movies:    1 partitions, 1 replicas
-      # * directors: 1 partitions, 1 replicas
-      # * output:    1 partitions, 1 replicas
-      KAFKA_CREATE_TOPICS: "movies:1:1,directors:1:1,output:1:1"
+      # * movies:    1 partitions, 1 replicas, compacted
+      # * directors: 1 partitions, 1 replicas, compacted
+      # * output:    1 partitions, 1 replicas, compacted
+      KAFKA_CREATE_TOPICS: "movies:1:1:compact,directors:1:1:compact,output:1:1:compact"
       # Create topics automatically
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # region Log compaction configuration
+      # Segment size of 1MB (event size is around 200B)
+      # This allows compaction to take effect in non-active segments in this PoC
+      KAFKA_LOG_SEGMENT_BYTES: 1024
+      # The minimum ratio of dirty log to total log for a log to be eligible for cleaning
+      # A higher ratio will mean fewer, more efficient cleanings but will mean more wasted space in the log
+      # A log is elegible for cleaning if there is, at least, a 10% of duplicates
+      KAFKA_LOG_CLEANER_MIN_CLEANABLE_RATIO: 0.1
+      # How long are delete records (tombstone) retained
+      # 5 minutes allow deletion of tombstones to be seen in this PoC
+      KAFKA_LOG_CLEANER_DELETE_RETENTION_MS: 300000
+      # endregion
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
