@@ -24,6 +24,9 @@ public class SqlJob {
 		// Set up the streaming execution environment
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
+		// Set parallelism to 1
+		env.setParallelism(1);
+
 		// Specify Blink Planner
 		// https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/common.html#main-differences-between-the-two-planners
 		EnvironmentSettings envSettings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
