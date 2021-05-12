@@ -285,3 +285,4 @@ docker run --network=vagrant_default -it --rm edenhill/kafkacat:1.6.0 -b kafka:2
 * [Alibaba: Introduction to SQL in Flink 1.11](https://www.alibabacloud.com/blog/introduction-to-sql-in-flink-1-11_597341)
 * [Kafka compaction documentation](https://kafka.apache.org/documentation/#compaction)
 * [Blog: Log compacted topics in Apache Kafka](https://towardsdatascience.com/log-compacted-topics-in-apache-kafka-b1aa1e4665a7)
+* [Kafkacat](https://github.com/edenhill/kafkacat)
