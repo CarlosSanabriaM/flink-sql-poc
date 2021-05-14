@@ -67,13 +67,13 @@ The Flink `kafka-upsert` connector used in this PoC:
     * Null values are interpreted in a special way: a record with a null value represents a “DELETE”
 
 The `docker-compose.yml` file automatically creates the following topics in the Kafka executed in the Docker container:
-* __movies__:    1 partitions, 1 replicas, compacted
-* __directors__: 1 partitions, 1 replicas, compacted
-* __output__:    1 partitions, 1 replicas, compacted
+* __movies__:           1 partitions, 1 replicas, compacted
+* __directors__:        1 partitions, 1 replicas, compacted
+* __directors-movies__: 1 partitions, 1 replicas, compacted
 
 This is specified in the `docker-compose.yml` file, in the following line:
 ```yaml
-KAFKA_CREATE_TOPICS: "movies:1:1:compact,directors:1:1:compact,output:1:1:compact"
+KAFKA_CREATE_TOPICS: "movies:1:1:compact,directors:1:1:compact,directors-movies:1:1:compact"
 ```
 
 #### Compaction
@@ -279,10 +279,13 @@ docker run --network=vagrant_default -it --rm edenhill/kafkacat:1.6.0 -b kafka:2
 
 
 ## References
-* [Connector Flink SQL Upsert-kafka](https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/connectors/upsert-kafka.html)
-* [Connector Flink SQL Kafka (we do not use it, only works with CDC in some specific formats)](https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/connectors/kafka.html)
-* [FLIP-149: Introduce the upsert-kafka Connector](https://cwiki.apache.org/confluence/display/FLINK/FLIP-149%3A+Introduce+the+upsert-kafka+Connector)
-* [Alibaba: Introduction to SQL in Flink 1.11](https://www.alibabacloud.com/blog/introduction-to-sql-in-flink-1-11_597341)
-* [Kafka compaction documentation](https://kafka.apache.org/documentation/#compaction)
-* [Blog: Log compacted topics in Apache Kafka](https://towardsdatascience.com/log-compacted-topics-in-apache-kafka-b1aa1e4665a7)
-* [Kafkacat](https://github.com/edenhill/kafkacat)
+* Flink
+    * [Connector Flink SQL Upsert-kafka](https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/connectors/upsert-kafka.html)
+    * [Connector Flink SQL Kafka (we do not use it, only works with CDC in some specific formats)](https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/connectors/kafka.html)
+    * [FLIP-149: Introduce the upsert-kafka Connector](https://cwiki.apache.org/confluence/display/FLINK/FLIP-149%3A+Introduce+the+upsert-kafka+Connector)
+    * [Alibaba: Introduction to SQL in Flink 1.11](https://www.alibabacloud.com/blog/introduction-to-sql-in-flink-1-11_597341)
+    * [Flink SQL User-defined Functions](https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/functions/udfs.html)
+* Kafka
+    * [Kafka compaction documentation](https://kafka.apache.org/documentation/#compaction)
+    * [Blog: Log compacted topics in Apache Kafka](https://towardsdatascience.com/log-compacted-topics-in-apache-kafka-b1aa1e4665a7)
+    * [Kafkacat](https://github.com/edenhill/kafkacat)
