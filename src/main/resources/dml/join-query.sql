@@ -1,4 +1,5 @@
 SELECT
+    GetDirectorsMoviesIdFunction(Directors.id, Movies.id) as id,
     Directors.name AS director,
     Movies.name AS movie,
     Movies.nominatedToOscar AS nominatedToOscar
