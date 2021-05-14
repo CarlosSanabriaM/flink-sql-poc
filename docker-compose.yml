@@ -24,10 +24,10 @@ services:
       # endregion
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       # Create 3 topics:
-      # * movies:    1 partitions, 1 replicas, compacted
-      # * directors: 1 partitions, 1 replicas, compacted
-      # * output:    1 partitions, 1 replicas, compacted
-      KAFKA_CREATE_TOPICS: "movies:1:1:compact,directors:1:1:compact,output:1:1:compact"
+      # * movies:           1 partitions, 1 replicas, compacted
+      # * directors:        1 partitions, 1 replicas, compacted
+      # * directors-movies: 1 partitions, 1 replicas, compacted
+      KAFKA_CREATE_TOPICS: "movies:1:1:compact,directors:1:1:compact,directors-movies:1:1:compact"
       # Create topics automatically
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       # region Log compaction configuration
