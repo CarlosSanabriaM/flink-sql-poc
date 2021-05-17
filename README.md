@@ -7,6 +7,67 @@ pulls Zookeeper, Kafka and Kafkacat Docker images from DockerHub,
 and runs containers for all of them with the corresponding port mappings for Kafka.
 
 
+## Flink SQL concepts
+The Table API and SQL interfaces integrate seamlessly with each other
+and [Flink’s DataStream API](https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/common.html#integration-with-datastream-and-dataset-api).
+
+Tables describe external data, such as a file, database table, or message queue.  
+Tables may either be temporary, and tied to the lifecycle of a single Flink session,
+or permanent, and visible across multiple Flink sessions and clusters.  
+In this PoC we will only be using temporary tables.
+
+Flink’s SQL integration is based on Apache Calcite, which implements the SQL standard.
+SQL queries are specified as regular Strings.
+
+Flink SQL queries are translated into DataStream programs whether their input is streaming or batch.
+
+A SQL query is translated to a DataStream when:
+* `TableEnvironment.executeSql()` is called
+* `Table.executeInsert()` is called
+* When a Table is converted into a DataStream
+* Other situations (explained in the [documentation](https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/common.html#translate-and-execute-a-query))
+
+A Table is emitted to an external system by writing it to a TableSink.
+A TableSink is a generic interface to support a wide variety of file formats (e.g. CSV, Apache Parquet, Apache Avro),
+storage systems (e.g., JDBC, Apache HBase, Apache Cassandra, Elasticsearch), or messaging systems (e.g., Apache Kafka, RabbitMQ).
+
+A continuous query never terminates and produces dynamic results (another dynamic table).
+The query continuously updates its (dynamic) result table to reflect changes on its (dynamic) input tables.
+
+The following figure visualizes the relationship of [streams, dynamic tables, and continuous queries](https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/streaming/dynamic_tables.html#dynamic-tables--continuous-queries:  
+![Dynamic Tables & Continuous Queries](https://ci.apache.org/projects/flink/flink-docs-release-1.12/fig/table-streaming/stream-query-stream.png)
+
+1. A stream is converted into a dynamic table.
+2. A continuous query is evaluated on the dynamic table yielding a new dynamic table.
+3. The resulting dynamic table is converted back into a stream.
+
+> Dynamic tables are foremost a logical concept. Dynamic tables are not necessarily (fully) materialized during query execution.
+
+A dynamic table can be continuously modified by INSERT, UPDATE, and DELETE changes just like a regular database table.  
+When converting a dynamic table into a stream or writing it to an external system, these changes need to be encoded.  
+Flink’s Table API and SQL support three ways to encode the changes of a dynamic table:
+* __Append-only stream__: A dynamic table that is only modified by INSERT changes can be converted into a stream by emitting the inserted rows.
+* __Retract stream__: Stream with two types of messages, add messages and retract messages.
+  A dynamic table is converted into a retract stream by encoding:
+  * An INSERT change as add message
+  * A DELETE change as a retract message
+  * An UPDATE change as a retract message for the updated (previous) row and an additional message for the updating (new) row
+
+  ![Retract stream](https://ci.apache.org/projects/flink/flink-docs-release-1.12/fig/table-streaming/undo-redo-mode.png)
+* __Upsert stream__: Stream with two types of messages, upsert messages and delete messages.
+   A dynamic table that is converted into an upsert stream requires a (possibly composite) unique key.
+   A dynamic table with a unique key is transformed into a stream by encoding:
+   * INSERT and UPDATE changes as upsert messages
+   * DELETE changes as delete messages
+
+   __The main difference to a retract stream__ is that __UPDATE changes are encoded with a single message__ and hence __more efficient__.
+
+  ![Upsert stream](https://ci.apache.org/projects/flink/flink-docs-release-1.12/fig/table-streaming/redo-mode.png)
+  
+> __IMPORTANT:__ Only append and retract streams are supported when converting a dynamic table into a DataStream.
+> Upsert streams are NOT currently supported.
+
+
 ## Kafka
 Kafka will be accessible:
 * To the Docker containers inside the VM through `kafka:29092`
