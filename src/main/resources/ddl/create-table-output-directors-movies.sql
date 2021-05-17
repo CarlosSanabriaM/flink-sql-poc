@@ -3,6 +3,8 @@ CREATE TABLE DirectorsMovies (
   director STRING,
   movie STRING,
   nominatedToOscar BOOLEAN,
+  -- ENFORCED/NOT ENFORCED controls if the constraint checks are performed on the incoming/outgoing data.
+  -- Flink does not own the data. Therefore, the only supported mode is the NOT ENFORCED mode.
   PRIMARY KEY (id) NOT ENFORCED
 ) WITH (
   'connector' = 'upsert-kafka',
