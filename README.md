@@ -34,7 +34,7 @@ storage systems (e.g., JDBC, Apache HBase, Apache Cassandra, Elasticsearch), or 
 A continuous query never terminates and produces dynamic results (another dynamic table).
 The query continuously updates its (dynamic) result table to reflect changes on its (dynamic) input tables.
 
-The following figure visualizes the relationship of [streams, dynamic tables, and continuous queries](https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/streaming/dynamic_tables.html#dynamic-tables--continuous-queries:  
+The following figure visualizes the relationship of [streams, dynamic tables, and continuous queries](https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/streaming/dynamic_tables.html#dynamic-tables--continuous-queries):  
 ![Dynamic Tables & Continuous Queries](https://ci.apache.org/projects/flink/flink-docs-release-1.12/fig/table-streaming/stream-query-stream.png)
 
 1. A stream is converted into a dynamic table.
