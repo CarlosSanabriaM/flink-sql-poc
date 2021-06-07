@@ -104,22 +104,22 @@ public class SqlJob {
         // This implementation gives as a result a retract stream:
         // A dynamic table is converted into a retract stream by encoding:
         // * An INSERT change as add message (+I)
-        // * A DELETE change as a retract message (???) TODO: ??
+        // * A DELETE change as a retract message (-D)
         // * An UPDATE change as a retract message for the updated (previous) row (-U), and an additional message for the updating (new) row (+U)
         //
         // A dynamic table that is converted into a retract stream DOES NOT need a unique primary key,
         // because each update generates a retract message of the previous value for that event.
         //endregion
 
-        //region Convert query Table result into an Upsert stream
-        // TODO
+        //region Convert query Table result into an Upsert stream (NOT POSSIBLE)
+        //
         // A dynamic table that is converted into an upsert stream requires a (possibly composite) unique key,
         // because UPDATES do not retract previous events and then create a new event with the new value.
         // UPDATES simply override the previous value of that unique key.
         //
         // A dynamic table with a unique key is transformed into a stream by encoding:
-        // * INSERT and UPDATE changes as upsert messages (U) TODO: ??
-        // * DELETE changes as delete messages (-D) TODO: ??
+        // * INSERT and UPDATE changes as upsert messages (*U)
+        // * DELETE changes as delete messages (-D)
         //
         // The stream consuming operator needs to be aware of the unique key attribute to apply messages correctly.
         // The main difference to a retract stream is that UPDATE changes are encoded with a single message and hence more efficient
