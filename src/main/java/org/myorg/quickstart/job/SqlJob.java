@@ -3,7 +3,6 @@ package org.myorg.quickstart.job;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.myorg.quickstart.udfs.scalar.GetDirectorsMoviesIdFunction;
@@ -34,7 +33,7 @@ public class SqlJob {
 
         // Create a TableEnvironment
         // https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/common.html#create-a-tableenvironment
-        final TableEnvironment tableEnv = StreamTableEnvironment.create(env, envSettings);
+        final StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, envSettings);
         //endregion
 
         //region Optionally specify TableConfig
@@ -90,6 +89,7 @@ public class SqlJob {
 
         //region Run SQL Query
         // Evaluate the SQL query and retrieve the result as a Table
+        // This table can be converted into a DataStream
         Table queryTable = tableEnv.sqlQuery(Utils.getResourcesFileContent("dml/join-query.sql"));
 
         // Execute the query and insert the results in the output Table
