@@ -193,6 +193,13 @@ The following image shows the entity relationship model used in this demo:
 ![Entity relationship model](docs/diagrams/diagrams-0-entity-relationship-model.png)
 
 
+## Configuration file
+Some configuration properties to execute the job are present in the `resources/config/conf.properties` file.
+
+These properties are parsed to the `JobConfig` interface, using the [OWNER library](http://owner.aeonbits.org/),
+and then they are used in the `SqlJob` class.
+
+
 ## Prerequisites
 * [Install VirtualBox](https://www.virtualbox.org/wiki/Downloads)
 * [Install Vagrant](https://www.vagrantup.com/docs/installation)
@@ -235,9 +242,18 @@ Step 2:
 ![Step 2](docs/images/intellij-2.png)
 
 Step 3:  
+> Here you have to specify the absolute path to the configuration file in the following format:  
+> `--conf <path-to-conf.properties>`
+
 ![Step 3](docs/images/intellij-3.png)
 
-Changes in the table stream will be printed in the IntelliJ `Run console`.
+Step 4:  
+![Step 4](docs/images/intellij-4.png)
+
+If the configuration property `convert-sql-output-to-datastream` is false,
+changes in the output Table will be printed in the IntelliJ `Run console`.
+
+If it's true, only changes to output DataStreams will be printed.
 
 ### 5. Test 1 (update normal fields) [vm]
 Here we test inserts and updates in normal fields (fields that are not used as FKs and are not used in the filters of the WHERE clause).
