@@ -1,12 +1,16 @@
 package org.myorg.quickstart.job;
 
+import org.aeonbits.owner.ConfigFactory;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.myorg.quickstart.config.JobConfig;
 import org.myorg.quickstart.udfs.scalar.GetDirectorsMoviesIdFunction;
 import org.myorg.quickstart.utils.Utils;
+
+import java.util.Properties;
 
 /**
  * Flink SQL Job.
@@ -20,6 +24,12 @@ import org.myorg.quickstart.utils.Utils;
 public class SqlJob {
 
     public static void main(String[] args) throws Exception {
+        //region Obtain configuration from properties file
+        String pathToConfigurationFile = Utils.getPathToConfigurationFileFromArgs(args);
+        Properties configurationProperties = Utils.getPropertiesFromPropertiesFile(pathToConfigurationFile);
+        JobConfig jobConfig = ConfigFactory.create(JobConfig.class, configurationProperties);
+        //endregion
+
         //region Set up environments
         // Set up the streaming execution environment
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
