@@ -194,7 +194,7 @@ The following image shows the entity relationship model used in this demo:
 
 
 ## Configuration file
-Some configuration properties to execute the job are present in the `resources/config/conf.properties` file.
+Some configuration properties to execute the job are present in the `resources/conf.properties` file.
 
 These properties are parsed to the `JobConfig` interface, using the [OWNER library](http://owner.aeonbits.org/),
 and then they are used in the `SqlJob` class.
