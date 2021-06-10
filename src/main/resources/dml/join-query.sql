@@ -9,7 +9,7 @@ SELECT
     -- Other fields
     Directors.name AS director,
     Movies.name AS movie,
-    Movies.nominatedToOscar AS nominatedToOscar
+    Movies.nominatedToOscar AS nominatedToOscar -- TODO: Remove?
 FROM
     Movies
     INNER JOIN

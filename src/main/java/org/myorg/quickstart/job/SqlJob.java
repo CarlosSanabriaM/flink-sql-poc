@@ -1,12 +1,16 @@
 package org.myorg.quickstart.job;
 
 import org.aeonbits.owner.ConfigFactory;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.myorg.quickstart.config.JobConfig;
+import org.myorg.quickstart.model.DirectorsMovies;
+import org.myorg.quickstart.operators.map.DirectorsSetMap;
 import org.myorg.quickstart.udfs.scalar.GetDirectorsMoviesIdFunction;
 import org.myorg.quickstart.utils.Utils;
 
@@ -108,7 +112,9 @@ public class SqlJob {
 
         // Execute the query and show the results in the stdout (OPTIONAL)
         TableResult queryTableResult = queryTable.execute();
-        queryTableResult.print();
+        // Only print Table if DataStreams are NOT printed, because both cannot be printed at the same time
+        if (!jobConfig.convertSqlOutputToDatastream())
+            queryTableResult.print();
 
         // https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/streaming/dynamic_tables.html#table-to-stream-conversion
         // This implementation gives as a result a retract stream:
@@ -121,7 +127,27 @@ public class SqlJob {
         // because each update generates a retract message of the previous value for that event.
         //endregion
 
-        //region Convert query Table result into an Upsert stream (NOT POSSIBLE)
+        //region Convert query Table into a Retract stream
+        // https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/common.html#convert-a-table-into-a-datastream
+
+        if (jobConfig.convertSqlOutputToDatastream()) {
+            // Convert the Table into a retract DataStream of POJO.
+            //   A retract stream of type X is a DataStream<Tuple2<Boolean, X>>.
+            //   The boolean field indicates the type of the change.
+            //   True is INSERT, false is DELETE.
+            DataStream<Tuple2<Boolean, DirectorsMovies>> queryRetractStream =
+                    tableEnv.toRetractStream(queryTable, DirectorsMovies.class);
+            queryRetractStream.print("queryRetractStream");
+
+            // Do some transformations on the DataStream, to demonstrate how both APIs can be easily integrated
+            //   Based on the boolean field (f0)
+            printCountOfDeleteEvents(queryRetractStream);
+            //   Based on the POJO (f1)
+            printTenetDirectors(queryRetractStream);
+        }
+        //endregion
+
+        //region Convert query Table into an Upsert stream (NOT POSSIBLE)
         //
         // A dynamic table that is converted into an upsert stream requires a (possibly composite) unique key,
         // because UPDATES do not retract previous events and then create a new event with the new value.
@@ -140,4 +166,24 @@ public class SqlJob {
         // Execute Flink program
         env.execute("Flink SQL Job");
     }
+
+    private static void printCountOfDeleteEvents(DataStream<Tuple2<Boolean, DirectorsMovies>> queryRetractStream) {
+        queryRetractStream
+                .filter(event -> !event.f0) // only let DELETE events pass the filter
+                .map(event -> 1) // transform all events to the Integer 1
+                .keyBy(event -> event) // group all events in the same node (all events have the same value (1))
+                .sum(0) // sum the received integers (keeping the previous sum value in state)
+                .print("numDeleteEventsStream");
+    }
+
+    private static void printTenetDirectors(DataStream<Tuple2<Boolean, DirectorsMovies>> queryRetractStream) {
+        queryRetractStream
+                .filter(event -> event.f0) // only let NON DELETE events pass the filter
+                .map(event -> event.f1) // simplify the stream by keeping only the DirectorsMovies object
+                .filter(event -> event.getMovie().equals("Tenet")) // keep only events of the movie "Tenet"
+                .keyBy(DirectorsMovies::getMovie) // group all events in the same node (all events have the same movie (Tenet))
+                .map(new DirectorsSetMap()) // use keyed state to store all the distinct directors of the movie
+                .print("tenetDirectors");
+    }
+
 }
