@@ -1,7 +1,7 @@
 directorId2|{
-"id": "directorId2",
-"name": "James Cameron",
-"metadata": {
-"tableName": "Directors"
-}
+  "id": "directorId2",
+  "name": "James Cameron",
+  "metadata": {
+    "tableName": "Directors"
+  }
 }

@@ -1,7 +1,7 @@
 directorId1|{
-"id": "directorId1",
-"name": "Tim Burton",
-"metadata": {
-"tableName": "Directors"
-}
+  "id": "directorId1",
+  "name": "Tim Burton",
+  "metadata": {
+    "tableName": "Directors"
+  }
 }

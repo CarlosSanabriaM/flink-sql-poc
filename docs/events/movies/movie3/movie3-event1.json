@@ -1,9 +1,9 @@
 movieId3|{
-"id": "movieId3",
-"name": "Avatar",
-"nominatedToOscar": true,
-"directorId": "directorId2",
-"metadata": {
-"tableName": "Movies"
-}
+  "id": "movieId3",
+  "name": "Avatar",
+  "nominatedToOscar": true,
+  "directorId": "directorId2",
+  "metadata": {
+    "tableName": "Movies"
+  }
 }

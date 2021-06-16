@@ -1,7 +1,7 @@
 directorId2|{
-"id": "directorId2",
-"name": "Guillermo del Toro",
-"metadata": {
-"tableName": "Directors"
-}
+  "id": "directorId2",
+  "name": "Guillermo del Toro",
+  "metadata": {
+    "tableName": "Directors"
+  }
 }
