@@ -3,8 +3,14 @@ CREATE TABLE DirectorsMovies (
   director STRING,
   movie STRING,
   nominatedToOscar BOOLEAN,
-  -- ENFORCED/NOT ENFORCED controls if the constraint checks are performed on the incoming/outgoing data.
-  -- Flink does not own the data. Therefore, the only supported mode is the NOT ENFORCED mode.
+
+  -- Metadata
+  eventTimestamp TIMESTAMP(3), -- max timestamp between the movie and the director that generated the current event
+  updatedBy STRING, -- the table whose update generated this event
+
+  -- PK
+  --  ENFORCED/NOT ENFORCED controls if the constraint checks are performed on the incoming/outgoing data.
+  --  Flink does not own the data. Therefore, the only supported mode is the NOT ENFORCED mode.
   PRIMARY KEY (id) NOT ENFORCED
 ) WITH (
   'connector' = 'upsert-kafka',

@@ -2,5 +2,8 @@ movieId2|{
 "id": "movieId2",
 "name": "Tenet",
 "nominatedToOscar": true,
-"directorId": "directorId2"
+"directorId": "directorId2",
+"metadata": {
+"tableName": "Movies"
+}
 }

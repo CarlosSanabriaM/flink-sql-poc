@@ -1,4 +1,7 @@
 directorId1|{
 "id": "directorId1",
-"name": "Quentin Tarantino"
+"name": "Quentin Tarantino",
+"metadata": {
+"tableName": "Directors"
+}
 }

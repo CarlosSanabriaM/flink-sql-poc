@@ -1,4 +1,7 @@
 directorId1|{
 "id": "directorId1",
-"name": "Steven Spielberg"
+"name": "Steven Spielberg",
+"metadata": {
+"tableName": "Directors"
+}
 }
