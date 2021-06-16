@@ -5,8 +5,10 @@ CREATE TABLE DirectorsMovies (
   nominatedToOscar BOOLEAN,
 
   -- Metadata
-  eventTimestamp TIMESTAMP(3), -- max timestamp between the movie and the director that generated the current event
-  updatedBy STRING, -- the table whose update generated this event
+  metadata ROW<
+    eventTimestamp TIMESTAMP(3), -- max timestamp between the movie and the director that generated the current event
+    updatedBy STRING -- the table whose update generated this event
+  >,
 
   -- PK
   --  ENFORCED/NOT ENFORCED controls if the constraint checks are performed on the incoming/outgoing data.
