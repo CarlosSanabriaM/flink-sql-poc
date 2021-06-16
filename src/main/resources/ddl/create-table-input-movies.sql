@@ -23,5 +23,6 @@ CREATE TABLE Movies (
   -- This connector requires both a key and value format
   -- where the key fields are derived from the PRIMARY KEY constraint
   'key.format' = 'raw',
-  'value.format' = 'json'
+  'value.format' = 'json',
+  'value.json.fail-on-missing-field' = 'true' -- Throw exception is a field is missing
 )
