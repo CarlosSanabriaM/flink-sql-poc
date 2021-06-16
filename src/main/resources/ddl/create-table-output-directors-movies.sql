@@ -22,5 +22,6 @@ CREATE TABLE DirectorsMovies (
   -- This connector requires both a key and value format
   -- where the key fields are derived from the PRIMARY KEY constraint
   'key.format' = 'raw',
-  'value.format' = 'json'
+  'value.format' = 'json',
+  'value.json.timestamp-format.standard' = 'ISO-8601' -- "yyyy-MM-ddTHH:mm:ss.s{precision}'Z'" format
 )

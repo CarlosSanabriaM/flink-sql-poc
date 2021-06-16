@@ -24,5 +24,6 @@ CREATE TABLE Movies (
   -- where the key fields are derived from the PRIMARY KEY constraint
   'key.format' = 'raw',
   'value.format' = 'json',
-  'value.json.fail-on-missing-field' = 'true' -- Throw exception is a field is missing
+  'value.json.fail-on-missing-field' = 'true', -- Throw exception is a field is missing
+  'value.json.timestamp-format.standard' = 'ISO-8601' -- "yyyy-MM-ddTHH:mm:ss.s{precision}'Z'" format
 )
