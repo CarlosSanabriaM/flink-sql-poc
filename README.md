@@ -255,7 +255,19 @@ changes in the output Table will be printed in the IntelliJ `Run console`.
 
 If it's true, only changes to output DataStreams will be printed.
 
-### 5. Test 1 (update normal fields) [vm]
+### 5. Create tmux session and Kafka consumer to the output topic [vm]
+This will create a tmux session with 2 windows:
+* The one on the top for the producers to the input Kafka topics
+* The one on the bottom for the consumer to the output Kafka topic
+
+```bash
+tmux new -s producer-consumer
+Ctrl-B + "
+docker run --network=vagrant_default -it --rm edenhill/kafkacat:1.6.0 -b kafka:29092 -C -t directors-movies -f 'key: %k\nvalue: %s\n(offset: %o, key-bytes: %K, value-bytes: %S)\n\n\n'
+Ctrl-B + ;
+```
+
+### 6. Test 1 (update normal fields) [vm]
 Here we test inserts and updates in normal fields (fields that are not used as FKs and are not used in the filters of the WHERE clause).
 
 | Event num | Input event                    | Output events                                                                               | Diagram                                                                              |
@@ -284,7 +296,7 @@ eval "$KAFKA_PRODUCER_MOVIES_PREFIX"movie1/movie1-event2-update-name.json; echo 
 
 ```
 
-### Test 2 (update field to don't pass the filters in the WHERE clause)
+### 7. Test 2 (update field to don't pass the filters in the WHERE clause) [vm]
 Here we test that an event that previously passed the filters in the WHERE clause, now doesn't pass those filters, due to a change in the fields of that event.  
 As a consequence of that, Flink should generate an event that retracts that event, to remove it from the "final materialized view", because it no longer satisfies the SQL query.
 
@@ -300,7 +312,7 @@ eval "$KAFKA_PRODUCER_DIRECTORS_PREFIX"director2/director2-event3-update-name.js
 
 ```
 
-### Test 3 (update FK field)
+### 8. Test 3 (update FK field) [vm]
 Here we test that a change in the FK value of an event is reflected in the joins.  
 Flink should remove from the join states the relationship between that event and it's previous FK, and also generate an event that retracts that relationship, to remove it from the "final materialized view", because it is no longer valid.
 
@@ -318,7 +330,7 @@ eval "$KAFKA_PRODUCER_DIRECTORS_PREFIX"director1/director1-event4-update-name.js
 
 ```
 
-### Test 4 (delete events)
+### 9. Test 4 (delete events) [vm]
 Here we test delete events.  
 An input Kafka event with a null value represents a “DELETE”.
 
@@ -335,6 +347,27 @@ eval "$KAFKA_PRODUCER_MOVIES_PREFIX"movie1/movie1-event3-delete.json; echo "Inse
 eval "$KAFKA_PRODUCER_DIRECTORS_PREFIX"director2/director2-event5-delete.json; echo "Inserted event 16"
 eval "$KAFKA_PRODUCER_MOVIES_PREFIX"movie2/movie2-event3-update-name.json; echo "Inserted event 17"
 
+```
+
+### 10. Stop consumer and detach from tmux session [vm]
+```bash
+Ctrl-B + ;
+Ctrl-C
+Ctrl-B + d
+```
+
+### 11. (Optional) Attach again to tmux session [vm]
+```bash
+tmux attach-session -t producer-consumer
+```
+
+### 12. (Optional) Remove and start Kafka containers to clean Kafka data [vm]
+This is useful if you want to clean the Kafka topics from previous inserted data.
+
+```bash
+cd /vagrant
+docker-compose rm --stop --force
+docker-compose up -d
 ```
 
 
