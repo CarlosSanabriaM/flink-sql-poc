@@ -72,6 +72,10 @@ public class SqlJob {
         //tableEnv.useDatabase("custom_database");
         //endregion
 
+        //region Create UDFs
+        tableEnv.createTemporarySystemFunction("GetDirectorsMoviesIdFunction", GetDirectorsMoviesIdFunction.class);
+        //endregion
+
         //region Create Tables
         // Tables can be either virtual (VIEWS) or regular (TABLES).
         // * VIEWS can be created from an existing Table object, usually the result of a Table API or SQL query.
@@ -95,10 +99,6 @@ public class SqlJob {
         // * Output tables
         // 		1. DirectorsMovies Table
         tableEnv.executeSql(Utils.getResourcesFileContent("ddl/create-table-output-directors-movies.sql"));
-        //endregion
-
-        //region Create UDFs
-        tableEnv.createTemporarySystemFunction("GetDirectorsMoviesIdFunction", GetDirectorsMoviesIdFunction.class);
         //endregion
 
         //region Run SQL Query
