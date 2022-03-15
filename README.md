@@ -193,6 +193,12 @@ The following image shows the entity relationship model used in this demo:
 ![Entity relationship model](docs/diagrams/diagrams-0-entity-relationship-model.png)
 
 
+## Job pipeline diagram
+The following image shows the pipeline of the Flink job of this demo:
+
+![Pipeline diagram](docs/diagrams/implementation-pipelines/flinksqlpoc-pipeline.png)
+
+
 ## Configuration file
 Some configuration properties to execute the job are present in the `resources/conf.properties` file.
 
