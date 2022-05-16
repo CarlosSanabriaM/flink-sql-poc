@@ -5,107 +5,108 @@
 	<groupId>org.myorg.quickstart</groupId>
 	<artifactId>flink-sql-poc</artifactId>
 	<name>Flink SQL POC</name>
-	<version>1.0.0</version>
+	<version>2.0.0</version>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<flink.version>1.12.3</flink.version>
-		<target.java.version>1.8</target.java.version>
-		<scala.binary.version>2.11</scala.binary.version>
+		<target.java.version>11</target.java.version>
+		<flink.version>1.15.0</flink.version>
+		<lombok.version>1.18.24</lombok.version>
+		<log4j.version>2.17.2</log4j.version>
 		<maven.compiler.source>${target.java.version}</maven.compiler.source>
 		<maven.compiler.target>${target.java.version}</maven.compiler.target>
-		<log4j.version>2.12.1</log4j.version>
 	</properties>
 
 	<dependencies>
-		<!-- Apache Flink dependencies -->
-		<!-- These dependencies are provided, because they should not be packaged into the JAR file. -->
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-java</artifactId>
-			<version>${flink.version}</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
-			<version>${flink.version}</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-clients_${scala.binary.version}</artifactId>
-			<version>${flink.version}</version>
-			<scope>provided</scope>
-		</dependency>
+		<!-- region Flink APIs dependencies -->
+		<!-- All of these dependencies must be in provided scope -->
+		<!-- They are needed to compile against, but should not be packaged into the project’s resulting application JAR file. -->
 
-		<!-- Apache Flink SQL & Table dependencies -->
+		<!-- https://nightlies.apache.org/flink/flink-docs-release-1.15/docs/dev/configuration/overview/#flink-apis -->
+		<!-- Table API + DataStream -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-table-api-java-bridge_${scala.binary.version}</artifactId>
+			<artifactId>flink-table-api-java-bridge</artifactId>
 			<version>${flink.version}</version>
 			<scope>provided</scope>
 		</dependency>
+		<!-- https://nightlies.apache.org/flink/flink-docs-release-1.15/docs/dev/configuration/overview/#running-and-packaging -->
+		<!-- If you want to run your job by simply executing the main class, you will need flink-runtime in your classpath. -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-runtime</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- In case of Table API programs, you will also need flink-table-runtime and flink-table-planner-loader. -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-table-runtime</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-table-planner-loader</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- RocksDB state backend -->
+		<!-- https://nightlies.apache.org/flink/flink-docs-release-1.15/docs/ops/state/state_backends/#setting-the-per-job-state-backend -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-statebackend-rocksdb</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- Required to be able to execute Flink in the IDE (IntelliJ) -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-clients</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- endregion -->
 
-		<!-- Flink Json (needed to be able to read and write JSON events with the Flink SQL & Table APIs -->
+		<!-- region Connectors and formats -->
+		<!-- All of these dependencies must be in compile scope -->
+		<!-- This will allow you to package the application code and all its required dependencies into one fat/uber JAR. -->
+		<!-- This includes packaging connectors, formats, and third-party dependencies of your job. -->
+		<!-- Kafka connector -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-connector-kafka</artifactId>
+			<version>${flink.version}</version>
+		</dependency>
+		<!-- Json format -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-json</artifactId>
 			<version>${flink.version}</version>
 		</dependency>
+		<!-- endregion -->
 
-		<!-- Apache Flink dependencies to run the Table API & SQL programs locally within your IDE -->
-		<!-- Blink Planner is used -->
-		<!-- https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/common.html#main-differences-between-the-two-planners -->
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-table-planner-blink_${scala.binary.version}</artifactId>
-			<version>${flink.version}</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
-			<version>${flink.version}</version>
-			<scope>provided</scope>
-		</dependency>
-
-		<!-- Apache Flink Table API & SQL extension dependencies -->
-		<!-- OPTIONAL -->
-		<!-- Only required if you want to implement a custom format or connector for (de)serializing rows or a set of user-defined functions -->
-		<!-- https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/table/#extension-dependencies -->
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-table-common</artifactId>
-			<version>${flink.version}</version>
-			<scope>provided</scope>
-		</dependency>
-
-		<!-- Add connector dependencies here. They must be in the default scope (compile). -->
-		<!-- Kafka connector -->
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-connector-kafka_${scala.binary.version}</artifactId>
-			<version>${flink.version}</version>
-		</dependency>
-
+		<!-- region 3rd party dependencies -->
+		<!-- All of these dependencies must be in compile scope -->
+		<!-- This will allow you to package the application code and all its required dependencies into one fat/uber JAR. -->
+		<!-- This includes packaging connectors, formats, and third-party dependencies of your job. -->
 		<!-- Lombok -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<version>1.18.18</version>
+			<version>${lombok.version}</version>
 		</dependency>
-
 		<!-- Owner (library to ease the use of .properties files) -->
-		<!-- https://mvnrepository.com/artifact/org.aeonbits.owner/owner-java8 -->
+		<!-- http://owner.aeonbits.org/ -->
 		<dependency>
 			<groupId>org.aeonbits.owner</groupId>
-			<artifactId>owner-java8</artifactId>
+			<artifactId>owner</artifactId>
 			<version>1.0.12</version>
 		</dependency>
+		<!-- endregion -->
 
-		<!-- Add logging framework, to produce console output when running in the IDE. -->
-		<!-- These dependencies are excluded from the application JAR by default. -->
+		<!-- region Logging -->
+		<!-- All of these dependencies must be in runtime scope -->
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-slf4j-impl</artifactId>
@@ -124,6 +125,7 @@
 			<version>${log4j.version}</version>
 			<scope>runtime</scope>
 		</dependency>
+		<!-- endregion -->
 	</dependencies>
 
 	<build>
@@ -133,10 +135,9 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.1</version>
+				<version>3.8.1</version>
 				<configuration>
-					<source>${target.java.version}</source>
-					<target>${target.java.version}</target>
+					<release>${target.java.version}</release>
 				</configuration>
 			</plugin>
 
@@ -145,7 +146,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
-				<version>3.1.1</version>
+				<version>3.2.4</version>
 				<executions>
 					<!-- Run shade goal on package phase -->
 					<execution>
@@ -157,7 +158,7 @@
 						<configuration>
 							<artifactSet>
 								<excludes>
-									<exclude>org.apache.flink:force-shading</exclude>
+									<exclude>org.apache.flink:flink-shaded-force-shading</exclude>
 									<exclude>com.google.code.findbugs:jsr305</exclude>
 									<exclude>org.slf4j:*</exclude>
 									<exclude>org.apache.logging.log4j:*</exclude>
@@ -194,50 +195,5 @@
 				</executions>
 			</plugin>
 		</plugins>
-
-		<pluginManagement>
-			<plugins>
-
-				<!-- This improves the out-of-the-box experience in Eclipse by resolving some warnings. -->
-				<plugin>
-					<groupId>org.eclipse.m2e</groupId>
-					<artifactId>lifecycle-mapping</artifactId>
-					<version>1.0.0</version>
-					<configuration>
-						<lifecycleMappingMetadata>
-							<pluginExecutions>
-								<pluginExecution>
-									<pluginExecutionFilter>
-										<groupId>org.apache.maven.plugins</groupId>
-										<artifactId>maven-shade-plugin</artifactId>
-										<versionRange>[3.1.1,)</versionRange>
-										<goals>
-											<goal>shade</goal>
-										</goals>
-									</pluginExecutionFilter>
-									<action>
-										<ignore/>
-									</action>
-								</pluginExecution>
-								<pluginExecution>
-									<pluginExecutionFilter>
-										<groupId>org.apache.maven.plugins</groupId>
-										<artifactId>maven-compiler-plugin</artifactId>
-										<versionRange>[3.1,)</versionRange>
-										<goals>
-											<goal>testCompile</goal>
-											<goal>compile</goal>
-										</goals>
-									</pluginExecutionFilter>
-									<action>
-										<ignore/>
-									</action>
-								</pluginExecution>
-							</pluginExecutions>
-						</lifecycleMappingMetadata>
-					</configuration>
-				</plugin>
-			</plugins>
-		</pluginManagement>
 	</build>
 </project>

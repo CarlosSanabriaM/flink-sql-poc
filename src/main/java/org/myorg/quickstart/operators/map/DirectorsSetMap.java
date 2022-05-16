@@ -6,12 +6,12 @@ import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
-import org.myorg.quickstart.model.DirectorsMovies;
+import org.apache.flink.types.Row;
 
 import java.util.HashSet;
 import java.util.Set;
 
-public class DirectorsSetMap extends RichMapFunction<DirectorsMovies, Set<String>> {
+public class DirectorsSetMap extends RichMapFunction<Row, Set<String>> {
 
     private transient ValueState<Set<String>> directorsSetState;
 
@@ -21,13 +21,13 @@ public class DirectorsSetMap extends RichMapFunction<DirectorsMovies, Set<String
         directorsSetState = getRuntimeContext().getState(
                 new ValueStateDescriptor<>(
                         "directorsSetState",
-                        TypeInformation.of(new TypeHint<Set<String>>() {
+                        TypeInformation.of(new TypeHint<>() {
                         })
                 ));
     }
 
     @Override
-    public Set<String> map(DirectorsMovies event) throws Exception {
+    public Set<String> map(Row event) throws Exception {
         Set<String> directorsSet;
 
         if (directorsSetState.value() == null)
@@ -37,8 +37,9 @@ public class DirectorsSetMap extends RichMapFunction<DirectorsMovies, Set<String
             // If not, obtain the set from state
             directorsSet = directorsSetState.value();
 
+        // TODO: Instead of using a SET, store the directors in order (in a list)
         // Add the current director to the set
-        directorsSet.add(event.getDirector());
+        directorsSet.add(event.getFieldAs("director"));
 
         // Update the state
         directorsSetState.update(directorsSet);
