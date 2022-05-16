@@ -256,10 +256,11 @@ Step 3:
 Step 4:  
 ![Step 4](docs/images/intellij-4.png)
 
-If the configuration property `convert-sql-output-to-datastream` is false,
-changes in the output Table will be printed in the IntelliJ `Run console`.
+If the configuration property `sql-output=SQL_TABLE`, changes in the output Table will be printed in the
+IntelliJ `Run console`.
 
-If it's true, only changes to output DataStreams will be printed.
+If the configuration property `sql-output=RETRACT_STREAM` or `sql-output=UPSERT_STREAM`, only changes to output
+DataStreams will be printed.
 
 ### 5. Create tmux session and Kafka consumer to the output topic [vm]
 This will create a tmux session with 2 windows:

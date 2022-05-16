@@ -3,12 +3,18 @@ package org.myorg.quickstart.job;
 import org.aeonbits.owner.ConfigFactory;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.DataTypes;
+import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.apache.flink.table.connector.ChangelogMode;
+import org.apache.flink.table.types.AtomicDataType;
+import org.apache.flink.table.types.logical.VarCharType;
 import org.apache.flink.types.Row;
 import org.apache.flink.types.RowKind;
 import org.myorg.quickstart.config.JobConfig;
+import org.myorg.quickstart.config.SqlOutput;
 import org.myorg.quickstart.operators.map.DirectorsHistoryMap;
 import org.myorg.quickstart.udfs.scalar.GetDirectorsMoviesIdFunction;
 import org.myorg.quickstart.utils.Utils;
@@ -108,8 +114,8 @@ public class SqlJob {
 
         // Execute the query and show the results in the stdout (OPTIONAL)
         TableResult queryTableResult = queryTable.execute();
-        // Only print Table if DataStreams are NOT printed, because both cannot be printed at the same time
-        if (!jobConfig.convertSqlOutputToDatastream())
+        // Tables and DataStreams cannot be printed at the same time due to Flink limitations
+        if (jobConfig.sqlOutput().equals(SqlOutput.SQL_TABLE))
             queryTableResult.print();
         //endregion
 
@@ -127,7 +133,7 @@ public class SqlJob {
 
         // https://nightlies.apache.org/flink/flink-docs-release-1.15/docs/dev/table/data_stream_api/
 
-        if (jobConfig.convertSqlOutputToDatastream()) {
+        if (jobConfig.sqlOutput().equals(SqlOutput.RETRACT_STREAM)) {
             // Convert the Table into a retract stream
             DataStream<Row> queryRetractStream = tableEnv.toChangelogStream(queryTable);
             queryRetractStream.print("queryRetractStream");
@@ -140,20 +146,45 @@ public class SqlJob {
         }
         //endregion
 
-        //region Convert query Table into an Upsert stream (NOT POSSIBLE)
+        //region Convert query Table into an Upsert stream (DOES NOT WORK CORRECTLY!)
         //
         // A dynamic table that is converted into an upsert stream requires a (possibly composite) unique key,
         // because UPDATES do not retract previous events and then create a new event with the new value.
         // UPDATES simply override the previous value of that unique key.
         //
         // A dynamic table with a unique key is transformed into a stream by encoding:
-        // * INSERT and UPDATE changes as upsert messages (*U)
+        // * INSERT changes as insert messages (+I)
+        // * UPDATE changes as update messages (+U)
         // * DELETE changes as delete messages (-D)
         //
         // The stream consuming operator needs to be aware of the unique key attribute to apply messages correctly.
-        // The main difference to a retract stream is that UPDATE changes are encoded with a single message and hence more efficient
-        //
-        // Only append and retract streams are supported when converting a dynamic table into a DataStream.
+        // The main difference to a retract stream is that UPDATE changes are encoded with a single message and hence more efficient.
+
+        // TODO: The current implementation of upsert streams does not work correctly:
+        //       Updates generate 2 events (-D and +I) instead of 1 event (+U)
+
+        if (jobConfig.sqlOutput().equals(SqlOutput.UPSERT_STREAM)) {
+            // Convert the Table into an upsert stream
+            DataStream<Row> queryUpsertStream = tableEnv.toChangelogStream(
+                    queryTable,
+                    Schema.newBuilder()
+                            .column("id", new AtomicDataType(new VarCharType(false, Integer.MAX_VALUE)))
+                            .column("director", "STRING")
+                            .column("movie", "STRING")
+                            .column("nominatedToOscar", "BOOLEAN")
+                            .column("metadata", DataTypes.ROW(DataTypes.TIMESTAMP(), DataTypes.STRING()))
+                            .primaryKey("id")  // specify the PK
+                            .build(),
+                    ChangelogMode.upsert()); // specify UPSERT stream
+
+            queryUpsertStream.print("queryUpsertStream");
+
+            // Do some transformations on the DataStream, to demonstrate how both APIs can be easily integrated
+            //   Based on the boolean field (f0)
+            printCountOfDeleteEvents(queryUpsertStream);
+            //   Based on the POJO (f1)
+            printTenetDirectors(queryUpsertStream);
+        }
         //endregion
 
         // Execute Flink program
