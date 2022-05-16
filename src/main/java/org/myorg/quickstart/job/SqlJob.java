@@ -9,7 +9,7 @@ import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.types.Row;
 import org.apache.flink.types.RowKind;
 import org.myorg.quickstart.config.JobConfig;
-import org.myorg.quickstart.operators.map.DirectorsSetMap;
+import org.myorg.quickstart.operators.map.DirectorsHistoryMap;
 import org.myorg.quickstart.udfs.scalar.GetDirectorsMoviesIdFunction;
 import org.myorg.quickstart.utils.Utils;
 
@@ -174,7 +174,7 @@ public class SqlJob {
                 .filter(event -> List.of(RowKind.INSERT, RowKind.UPDATE_AFTER).contains(event.getKind())) // only let NON DELETE events pass the filter
                 .filter(event -> event.getFieldAs("movie").equals("Tenet")) // keep only Tenet movie events
                 .keyBy(event -> event.getField("movie")) // group all events in the same node (all events have the same movie (Tenet))
-                .map(new DirectorsSetMap()) // use keyed state to store all the distinct directors of the movie
+                .map(new DirectorsHistoryMap()) // use keyed state to store all the distinct directors of the movie
                 .print("tenetDirectors");
     }
 

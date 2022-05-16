@@ -8,43 +8,44 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.types.Row;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.LinkedHashSet;
 
-public class DirectorsSetMap extends RichMapFunction<Row, Set<String>> {
+public class DirectorsHistoryMap extends RichMapFunction<Row, LinkedHashSet<String>> {
 
-    private transient ValueState<Set<String>> directorsSetState;
+    // LinkedHashSet remembers the order in which the elements were inserted into the set,
+    // and returns its elements in that order.
+
+    private transient ValueState<LinkedHashSet<String>> directorsState;
 
     @Override
     public void open(Configuration config) {
         // Initialize/Create/Retrieve the states
-        directorsSetState = getRuntimeContext().getState(
+        directorsState = getRuntimeContext().getState(
                 new ValueStateDescriptor<>(
-                        "directorsSetState",
+                        "directorsState",
                         TypeInformation.of(new TypeHint<>() {
                         })
                 ));
     }
 
     @Override
-    public Set<String> map(Row event) throws Exception {
-        Set<String> directorsSet;
+    public LinkedHashSet<String> map(Row event) throws Exception {
+        LinkedHashSet<String> directors;
 
-        if (directorsSetState.value() == null)
+        if (directorsState.value() == null)
             // If the state is empty, create an empty set
-            directorsSet = new HashSet<>();
+            directors = new LinkedHashSet<>();
         else
             // If not, obtain the set from state
-            directorsSet = directorsSetState.value();
+            directors = directorsState.value();
 
-        // TODO: Instead of using a SET, store the directors in order (in a list)
         // Add the current director to the set
-        directorsSet.add(event.getFieldAs("director"));
+        directors.add(event.getFieldAs("director"));
 
         // Update the state
-        directorsSetState.update(directorsSet);
+        directorsState.update(directors);
 
         // Return the set
-        return directorsSet;
+        return directors;
     }
 }
